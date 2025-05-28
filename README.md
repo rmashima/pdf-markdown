@@ -25,7 +25,7 @@ This application provides a graphical user interface (GUI) for converting PDF fi
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/rmashima/pdf-markdown.git
 cd pdf-markdown
 ```
 

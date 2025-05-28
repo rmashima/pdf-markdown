@@ -25,7 +25,7 @@ PyMuPDF4LLMを使用してPDFをMarkdownに変換するシンプルなGUIアプ�
 
 1. リポジトリをクローンします：
 ```bash
-git clone <repository-url>
+git clone https://github.com/rmashima/pdf-markdown.git
 cd pdf-markdown
 ```
 
