@@ -64,8 +64,9 @@ class LanguageManager:
                 "file_selection": "PDFファイル選択",
                 "browse": "参照",
                 "drag_drop_hint": "または、PDFファイルをこのウィンドウにドラッグ＆ドロップしてください",
-                "conversion_options": "変換オプション",
-                "add_page_headers": "ページ番号を見出しとして追加",
+                "conversion_options": "変換オプション",                "add_page_headers": "ページ番号を見出しとして追加",
+                "page_range": "ページ範囲",
+                "page_range_hint": "変換するページ範囲を指定 (例: 1-5, 3,7,10, または空白で全ページ)",
                 "language_selection": "言語選択",
                 "start_conversion": "変換開始",
                 "ready": "準備完了",
@@ -93,8 +94,10 @@ class LanguageManager:
                 "no_pages": "PDFにページが含まれていません。",
                 "page_conversion_error": "の変換でエラー",
                 "pdf_read_error": "PDFファイルの読み込みエラー",
-                "conversion_error": "変換エラー",
-                "file_save_error": "ファイル保存エラー",
+                "conversion_error": "変換エラー",                "file_save_error": "ファイル保存エラー",
+                "invalid_page_range": "無効なページ範囲です",
+                "page_range_error": "ページ範囲の指定に誤りがあります",
+                "page_out_of_range": "指定されたページが範囲外です",
                 "pymupdf_not_installed": "PyMuPDF4LLMまたはPyMuPDFがインストールされていません。",
                 "install_pymupdf": "pip install pymupdf4llm でインストールしてください。",
                 "tkinterdnd2_not_installed": "tkinterdnd2がインストールされていません。",
@@ -105,8 +108,9 @@ class LanguageManager:
                 "file_selection": "PDF File Selection",
                 "browse": "Browse",
                 "drag_drop_hint": "Or drag and drop a PDF file into this window",
-                "conversion_options": "Conversion Options",
-                "add_page_headers": "Add page numbers as headers",
+                "conversion_options": "Conversion Options",                "add_page_headers": "Add page numbers as headers",
+                "page_range": "Page Range",
+                "page_range_hint": "Specify page range to convert (e.g., 1-5, 3,7,10, or leave empty for all pages)",
                 "language_selection": "Language",
                 "start_conversion": "Start Conversion",
                 "ready": "Ready",
@@ -134,8 +138,10 @@ class LanguageManager:
                 "no_pages": "The PDF contains no pages.",
                 "page_conversion_error": "Error converting page",
                 "pdf_read_error": "PDF file reading error",
-                "conversion_error": "Conversion error",
-                "file_save_error": "File save error",
+                "conversion_error": "Conversion error",                "file_save_error": "File save error",
+                "invalid_page_range": "Invalid page range",
+                "page_range_error": "Error in page range specification", 
+                "page_out_of_range": "Specified page is out of range",
                 "pymupdf_not_installed": "PyMuPDF4LLM or PyMuPDF is not installed.",
                 "install_pymupdf": "Please install with: pip install pymupdf4llm",
                 "tkinterdnd2_not_installed": "tkinterdnd2 is not installed.",
@@ -250,12 +256,23 @@ class PDFToMarkdownConverter:
         # Options frame / オプションフレーム
         self.options_frame = ttk.LabelFrame(main_frame, text=self.lang_manager.get_text("conversion_options"), padding="10")
         self.options_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
-        
-        # Page number header addition option / ページ番号見出し追加オプション
+          # Page number header addition option / ページ番号見出し追加オプション
         self.add_page_headers_var = tk.BooleanVar(value=True)
         self.page_headers_checkbox = ttk.Checkbutton(self.options_frame, text=self.lang_manager.get_text("add_page_headers"), 
                        variable=self.add_page_headers_var)
         self.page_headers_checkbox.grid(row=0, column=0, sticky=tk.W)
+        
+        # Page range specification / ページ範囲指定
+        page_range_label = ttk.Label(self.options_frame, text=self.lang_manager.get_text("page_range"))
+        page_range_label.grid(row=1, column=0, sticky=tk.W, pady=(10, 0))
+        
+        self.page_range_var = tk.StringVar()
+        self.page_range_entry = ttk.Entry(self.options_frame, textvariable=self.page_range_var, width=30)
+        self.page_range_entry.grid(row=2, column=0, sticky=tk.W, pady=(5, 0))
+        
+        page_range_hint = ttk.Label(self.options_frame, text=self.lang_manager.get_text("page_range_hint"), 
+                                  foreground="gray", font=("TkDefaultFont", 8))
+        page_range_hint.grid(row=3, column=0, sticky=tk.W, pady=(2, 0))
         
         # Conversion button frame / 変換ボタンフレーム
         button_frame = ttk.Frame(main_frame)
@@ -310,6 +327,16 @@ class PDFToMarkdownConverter:
         self.drag_drop_label.config(text=self.lang_manager.get_text("drag_drop_hint"))
         self.options_frame.config(text=self.lang_manager.get_text("conversion_options"))
         self.page_headers_checkbox.config(text=self.lang_manager.get_text("add_page_headers"))
+        
+        # Update page range related labels / ページ範囲関連のラベルを更新
+        try:
+            page_range_label = self.options_frame.grid_slaves(row=1, column=0)[0]
+            page_range_label.config(text=self.lang_manager.get_text("page_range"))
+            page_range_hint = self.options_frame.grid_slaves(row=3, column=0)[0]
+            page_range_hint.config(text=self.lang_manager.get_text("page_range_hint"))
+        except IndexError:
+            pass  # UI not fully initialized yet / UIがまだ完全に初期化されていない
+        
         self.convert_button.config(text=self.lang_manager.get_text("start_conversion"))
         self.log_frame.config(text=self.lang_manager.get_text("log"))
         
@@ -474,6 +501,65 @@ class PDFToMarkdownConverter:
         
         return all_results
     
+    def convert_specific_pages(self, pdf_path, page_numbers):
+        """Convert specific pages only / 指定したページのみを変換"""
+        doc = None
+        try:
+            # Open document / ドキュメントを開く
+            doc = pymupdf.open(pdf_path)
+            total_pages = len(doc)
+            
+            if total_pages == 0:
+                return {'error': self.lang_manager.get_text("no_pages")}
+            
+            all_results = []
+            
+            for i, page_num in enumerate(page_numbers):
+                single_page_doc = None
+                try:
+                    # Add page number as header / ページ番号を見出しとして追加
+                    if self.add_page_headers_var.get():
+                        header = f"\n\n# Page {page_num}\n\n"
+                    else:
+                        header = "\n\n"
+                    
+                    # Convert single page to Markdown / 単一ページをMarkdownに変換
+                    single_page_doc = pymupdf.open()
+                    single_page_doc.insert_pdf(doc, from_page=page_num-1, to_page=page_num-1)
+                    
+                    # Convert with PyMuPDF4LLM / PyMuPDF4LLMで変換
+                    md_text = pymupdf4llm.to_markdown(single_page_doc)
+                    
+                    all_results.append({
+                        'page_num': page_num,
+                        'content': header + md_text
+                    })
+                    
+                    # Update progress / プログレス更新
+                    progress = ((i + 1) / len(page_numbers)) * 100
+                    self.progress_var.set(progress)
+                    message = f"{self.lang_manager.get_text('page_completed')} {page_num} ({i + 1}/{len(page_numbers)})"
+                    self.log_message(message)
+                    self.root.update()  # Update UI / UI更新
+                    
+                except Exception as e:
+                    error_msg = f"{self.lang_manager.get_text('page_conversion_error')} {page_num}: {str(e)}"
+                    self.log_message(error_msg)
+                    # Continue on individual page errors / 個別ページのエラーは継続する
+                    
+                finally:
+                    if single_page_doc:
+                        single_page_doc.close()
+            
+            return all_results
+            
+        except Exception as e:
+            return {'error': f"{self.lang_manager.get_text('pdf_read_error')}: {str(e)}"}
+        
+        finally:
+            if doc:
+                doc.close()
+
     def start_conversion(self):
         """Start conversion / 変換開始"""
         pdf_path = self.file_path_var.get().strip()
@@ -507,8 +593,7 @@ class PDFToMarkdownConverter:
         # Clear log / ログクリア
         self.log_text.delete(1.0, tk.END)
         self.log_message(self.lang_manager.get_text("conversion_starting"))
-        
-        # Execute conversion / 変換実行
+          # Execute conversion / 変換実行
         self.run_conversion(pdf_path)
     
     def run_conversion(self, pdf_path):
@@ -521,8 +606,26 @@ class PDFToMarkdownConverter:
             message = f"{self.lang_manager.get_text('total_pages')}: {total_pages}"
             self.log_message(message)
             
-            # Convert all pages / 全ページを変換
-            all_results = self.convert_pages(pdf_path)
+            # Parse page range / ページ範囲を解析
+            try:
+                page_range_str = self.page_range_var.get().strip()
+                page_numbers = self.parse_page_range(page_range_str, total_pages)
+                
+                if page_numbers != list(range(1, total_pages + 1)):
+                    # Convert specific pages / 指定ページを変換
+                    self.log_message(f"Converting pages: {', '.join(map(str, page_numbers))}")
+                    all_results = self.convert_specific_pages(pdf_path, page_numbers)
+                else:
+                    # Convert all pages / 全ページを変換
+                    all_results = self.convert_pages(pdf_path)
+                
+            except Exception as e:
+                # Show error for invalid page range / 無効なページ範囲のエラーを表示
+                error_msg = str(e)
+                self.log_message(error_msg)
+                messagebox.showerror(self.lang_manager.get_text("error"), error_msg)
+                self.reset_ui_state()
+                return
             
             # Process results / 結果処理
             self.handle_conversion_result(pdf_path, all_results)
@@ -567,18 +670,33 @@ class PDFToMarkdownConverter:
             # Determine output filename (safe filename generation) / 出力ファイル名を決定（安全なファイル名生成）
             pdf_name = pathlib.Path(pdf_path).stem
             parent_dir = pathlib.Path(pdf_path).parent
-            output_path = parent_dir / f"{pdf_name}.md"
+            
+            # Add page range info to filename if specific pages were converted / 特定ページが変換された場合はページ範囲情報をファイル名に追加
+            page_range_str = self.page_range_var.get().strip()
+            if page_range_str:
+                # Sanitize page range string for filename / ファイル名用にページ範囲文字列をサニタイズ
+                safe_range = page_range_str.replace(',', '_').replace('-', 'to').replace(' ', '')
+                output_path = parent_dir / f"{pdf_name}_pages_{safe_range}.md"
+            else:
+                output_path = parent_dir / f"{pdf_name}.md"
             
             # Add number if existing file exists / 既存ファイルがある場合は番号を付ける
             counter = 1
+            original_output_path = output_path
             while output_path.exists():
-                output_path = parent_dir / f"{pdf_name}_{counter}.md"
+                if page_range_str:
+                    safe_range = page_range_str.replace(',', '_').replace('-', 'to').replace(' ', '')
+                    output_path = parent_dir / f"{pdf_name}_pages_{safe_range}_{counter}.md"
+                else:
+                    output_path = parent_dir / f"{pdf_name}_{counter}.md"
                 counter += 1
             
             # Combine content and save / 内容を結合して保存
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(f"# {pdf_name}\n\n")
                 f.write(f"*PDF to Markdown converted file*\n\n")
+                if page_range_str:
+                    f.write(f"*Converted pages: {page_range_str}*\n\n")
                 f.write("---\n\n")
                 
                 for result in results:
@@ -593,6 +711,45 @@ class PDFToMarkdownConverter:
         self.is_converting = False
         self.convert_button.config(state=tk.NORMAL)
         self.progress_var.set(0)
+    
+    def parse_page_range(self, page_range_str, total_pages):
+        """Parse page range string and return list of page numbers / ページ範囲文字列を解析してページ番号のリストを返す"""
+        if not page_range_str.strip():
+            # Return all pages if empty / 空の場合は全ページを返す
+            return list(range(1, total_pages + 1))
+        
+        pages = []
+        try:
+            # Split by comma / カンマで分割
+            parts = page_range_str.split(',')
+            
+            for part in parts:
+                part = part.strip()
+                if '-' in part:
+                    # Range specification like "1-5" / "1-5"のような範囲指定
+                    start, end = part.split('-', 1)
+                    start = int(start.strip())
+                    end = int(end.strip())
+                    
+                    if start < 1 or end > total_pages or start > end:
+                        raise ValueError(f"Invalid range: {part}")
+                    
+                    pages.extend(range(start, end + 1))
+                else:
+                    # Single page number / 単一ページ番号
+                    page_num = int(part)
+                    if page_num < 1 or page_num > total_pages:
+                        raise ValueError(f"Page {page_num} out of range")
+                    pages.append(page_num)
+            
+            # Remove duplicates and sort / 重複を削除してソート
+            pages = sorted(list(set(pages)))
+            return pages
+            
+        except ValueError as e:
+            raise Exception(f"{self.lang_manager.get_text('page_range_error')}: {str(e)}")
+        except Exception as e:
+            raise Exception(f"{self.lang_manager.get_text('invalid_page_range')}: {str(e)}")
 
 
 def main():
