@@ -1,0 +1,43 @@
+[project]
+name = "pdf-markdown"
+version = "0.1.0"
+description = "PDF to Markdown converter with GUI using PyMuPDF4LLM"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    {name = "PDF Markdown Team"}
+]
+keywords = ["pdf", "markdown", "converter", "gui", "pymupdf"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: X11 Applications",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Office Suites",
+    "Topic :: Text Processing :: Markup",
+]
+dependencies = [
+    "pyinstaller>=6.13.0",
+    "pymupdf4llm>=0.0.10",
+    "tkinterdnd2>=0.4.3",
+]
+
+[project.optional-dependencies]
+build = [
+    "pyinstaller>=6.13.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-username/pdf-markdown"
+Repository = "https://github.com/your-username/pdf-markdown"
+Issues = "https://github.com/your-username/pdf-markdown/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
